@@ -11,6 +11,11 @@ A shell that will compare fixtures against live DB tables to make it easy to spo
 composer require --dev psa/cakephp-fixture-check
 ```
 
+And in your `bootstrap.php` (or better yet `bootstrap_cli.php`):
+```
+Plugin::load('Psa/FixtureCheck');
+```
+
 ## Usage
 ```
 bin/cake FixtureCheck
