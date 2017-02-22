@@ -2,10 +2,12 @@
 namespace Psa\FixtureCheck\Shell;
 
 use Cake\Console\Shell;
+use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Core\Plugin;
 use Cake\Database\Schema\Collection;
 use Cake\Datasource\ConnectionManager;
+use Cake\Error\Debugger;
 use Cake\Filesystem\Folder;
 use Cake\ORM\Table;
 
@@ -22,18 +24,20 @@ use Cake\ORM\Table;
  * Users against the live connection.
  *
  * @author Florian Krämer
+ * @author Mark Scherer
  * @copyright PSA Publishers Ltd
  * @license MIT
  */
 class FixtureCheckShell extends Shell {
 
 	/**
-	 * @var array
 	 * Configuration read from Configure
 	 *
-	 * @param array
+	 * @var array
 	 */
-	protected $_config = [];
+	protected $_config = [
+		'ignoreClasses' => [],
+	];
 
 	/**
 	 * Flag if differences where detected
@@ -47,7 +51,7 @@ class FixtureCheckShell extends Shell {
 	 */
 	public function initialize() {
 		parent::initialize();
-		$this->_config = (array)Configure::read('FixtureCheck');
+		$this->_config = (array)Configure::read('FixtureCheck') + $this->_config;
 	}
 
 	/**
@@ -65,10 +69,11 @@ class FixtureCheckShell extends Shell {
 		$connection = ConnectionManager::get($this->param('connection'));
 
 		$collection = new Collection($connection);
-		$liveTables = $collection->listTables();
+		//$liveTables = $collection->listTables();
 
 		foreach ($fixtures as $fixture) {
-			$fixtureClass = '\App\Test\Fixture\\' . $fixture;
+			//$className = App::className($fixture, 'Test/Fixture', 'Fixture');
+			$fixtureClass = 'App\Test\Fixture\\' . $fixture;
 			if (!class_exists($fixtureClass)) {
 				$this->err(sprintf('Fixture %s does not exist.', $fixtureClass));
 				continue;
@@ -80,8 +85,9 @@ class FixtureCheckShell extends Shell {
 
 			$fixture = new $fixtureClass();
 			$fixtureFields = $fixture->fields;
-			$tablesWithFixtures = [];
+			//$tablesWithFixtures = [];
 
+			//TODO: Add indexes and constraints check, as well
 			unset(
 				$fixtureFields['_options'],
 				$fixtureFields['_constraints'],
@@ -94,7 +100,7 @@ class FixtureCheckShell extends Shell {
 					'connection' => $connection
 				]);
 
-				$this->info(sprintf('Comparing %s with table %s', $fixtureClass, $fixture->table));
+				$this->info(sprintf('Comparing `%s` with table `%s`', $fixtureClass, $fixture->table));
 
 				$liveFields = [];
 				$columns = $table->schema()->columns();
@@ -132,27 +138,55 @@ class FixtureCheckShell extends Shell {
 	 * @return void
 	 */
 	public function _compareFields($fixtureFields, $liveFields) {
-		$liveFieldKeys = array_keys($liveFields);
+		// Warn only about relevant fields
+		$list = [
+			'autoIncrement',
+			'default',
+			'length',
+			'null',
+			'precision',
+			'type',
+			'unsigned',
+		];
+
+		$errors = [];
 		foreach ($fixtureFields as $fieldName => $fixtureField) {
-			if (!in_array($fixtureField, $liveFieldKeys)) {
-				unset($fixtureFields[$fieldName]);
+			if (!isset($liveFields[$fieldName])) {
+				$this->out('Field ' . $fieldName . ' is missing from the live DB!');
 				continue;
 			}
 
 			$liveField = $liveFields[$fieldName];
-			ksort($fixtureField);
-			ksort($liveField);
 
 			foreach ($fixtureField as $key => $value) {
-				if (!array_key_exists($key, $liveField)) {
-					//$this->out('Field ' . $fieldName . ':' . $key . ' is missing from the live DB!');
+				if (!in_array($key, $list)) {
+					continue;
+				}
+
+				if (!isset($liveField[$key]) && $value !== null) {
+					$errors[] = ' * ' . sprintf('Field attribute `%s` is missing from the live DB!', $fieldName . ':' . $key);
 					continue;
 				}
 				if ($liveField[$key] !== $value) {
-					$this->out('Field ' . $fieldName . ':' . $key . ' differs from live DB!');
+					$errors[] = ' * ' . sprintf(
+						'Field attribute `%s` differs from live DB! (`%s` vs `%s` live)',
+						$fieldName . ':' . $key,
+						Debugger::exportVar($value, true),
+						Debugger::exportVar($liveField[$key], true)
+					);
 				}
 			}
 		}
+
+		if (!$errors) {
+			return;
+		}
+
+		$this->warn('The following field attributes mismatch:');
+
+		$this->out($errors);
+		$this->_issuesFound = true;
+		$this->out($this->nl(0));
 	}
 
 	/**
