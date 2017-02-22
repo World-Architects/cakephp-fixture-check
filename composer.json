@@ -1,0 +1,41 @@
+{
+	"name": "psa/cakephp-fixture-check",
+	"type": "cakephp-plugin",
+	"description": "Plugin to compare fixtures with live DB tables",
+	"keywords": ["fixtures", "testing"],
+	"homepage": "https://github.com/World-Architects/cakephp-fixture-check",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Florian Krämer",
+			"homepage": "http://world-architects.com"
+		},
+		{
+			"name": "Falk Romano",
+			"homepage": "http://world-architects.com"
+		}
+	],
+	"minimum-stability": "dev",
+	"require": {
+		"cakephp/cakephp": "^3.4",
+		"cakephp/plugin-installer": "*"
+	},
+	"require-dev": {
+        "phpunit/phpunit": "<6.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Psa\\FixtureCheck\\": "src",
+			"Psa\\FixtureCheck\\Test\\Fixture\\": "tests\\Fixture"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"Cake\\Test\\": "/vendor/cakephp/cakephp/tests",
+			"Psa\\FixtureCheck\\Test\\TestCase\\": "tests"
+		}
+	},
+	"scripts": {
+		"post-autoload-dump": "Cake\\Composer\\Installer\\PluginInstaller::postAutoloadDump"
+	}
+}
