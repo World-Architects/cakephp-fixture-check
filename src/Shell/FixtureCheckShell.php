@@ -290,23 +290,26 @@ class FixtureCheckShell extends Shell {
 	 */
 	public function getOptionParser() {
 		return parent::getOptionParser()
-			->description('Compare DB and fixture schema columns.')
+			->setDescription('Compare DB and fixture schema columns.')
 			->addOption('connection', [
 				'short' => 'c',
 				'default' => 'default',
-				'help' => 'Connection to compare against'
+				'help' => 'Connection to compare against.'
 			])
 			->addOption('plugin', [
 				'short' => 'p',
 				'help' => 'Plugin'
 			])
 			// @todo implement this
+			/*
 			->addOption('direction', [
 				'short' => 'd',
 				'default' => 'both',
-				'help' => 'Direction of diff detection: `both`, `fixture` or `db`'
+				'help' => 'Direction of diff detection: `both`, `fixture` or `db`.'
 			])
+			*/
 			->addOption('fixtures', [
+				'help' => 'Fixtures to use.',
 				'short' => 'f',
 				'default' => null
 			]);
