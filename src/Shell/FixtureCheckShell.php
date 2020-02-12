@@ -47,6 +47,11 @@ class FixtureCheckShell extends Shell {
 	protected $_issuesFound = false;
 
 	/**
+	 * @var int
+	 */
+	protected $_totalDifferencesDetected = 0;
+
+	/**
 	 * @inheritDoc
 	 */
 	public function initialize() {
@@ -123,10 +128,14 @@ class FixtureCheckShell extends Shell {
 			foreach ($this->_config['ignoreClasses'] as $ignoredFixture) {
 				$this->out(' * ' . $ignoredFixture);
 			}
+			$this->out($this->nl(0));
 		}
 
 		if ($this->_issuesFound) {
-			$this->abort('Differences detected, check your fixtures and DB.');
+			$this->abort(sprintf(
+				'%d differences detected, check your fixtures and DB.',
+				$this->_totalDifferencesDetected
+			));
 		}
 	}
 
@@ -167,9 +176,10 @@ class FixtureCheckShell extends Shell {
 					$errors[] = ' * ' . sprintf('Field attribute `%s` is missing from the live DB!', $fieldName . ':' . $key);
 					continue;
 				}
-				if ($liveField[$key] !== $value) {
+
+				if (isset($liveField[$key]) && $liveField[$key] !== $value) {
 					$errors[] = ' * ' . sprintf(
-						'Field attribute `%s` differs from live DB! (`%s` vs `%s` live)',
+						'Field attribute `%s` differs from live DB! ' . $this->nl(1) . '   %s vs %s on live',
 						$fieldName . ':' . $key,
 						Debugger::exportVar($value, true),
 						Debugger::exportVar($liveField[$key], true)
@@ -182,7 +192,9 @@ class FixtureCheckShell extends Shell {
 			return;
 		}
 
-		$this->warn('The following field attributes mismatch:');
+		$errorCount = count($errors);
+		$this->_totalDifferencesDetected += $errorCount;
+		$this->warn(sprintf('Found %d attribute mismatches:', $errorCount));
 
 		$this->out($errors);
 		$this->_issuesFound = true;
