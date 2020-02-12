@@ -1,4 +1,5 @@
 <?php
+
 namespace Psa\FixtureCheck\Shell;
 
 use Cake\Console\Shell;
@@ -28,7 +29,8 @@ use Cake\ORM\Table;
  * @copyright PSA Publishers Ltd
  * @license MIT
  */
-class FixtureCheckShell extends Shell {
+class FixtureCheckShell extends Shell
+{
 
 	/**
 	 * Configuration read from Configure
@@ -54,7 +56,8 @@ class FixtureCheckShell extends Shell {
 	/**
 	 * @inheritDoc
 	 */
-	public function initialize() {
+	public function initialize()
+	{
 		parent::initialize();
 		$this->_config = (array)Configure::read('FixtureCheck') + $this->_config;
 	}
@@ -62,14 +65,16 @@ class FixtureCheckShell extends Shell {
 	/**
 	 * @return void
 	 */
-	public function main() {
+	public function main()
+	{
 		$this->diff();
 	}
 
 	/**
 	 * @return void
 	 */
-	public function diff() {
+	public function diff()
+	{
 		$fixtures = $this->_getFixtures();
 		$connection = ConnectionManager::get($this->param('connection'));
 
@@ -118,7 +123,7 @@ class FixtureCheckShell extends Shell {
 
 				$this->_compareFieldPresence($fixtureFields, $liveFields, $fixtureClass);
 				$this->_compareFields($fixtureFields, $liveFields);
-			} catch(\Cake\Database\Exception $e) {
+			} catch (\Cake\Database\Exception $e) {
 				$this->err($e->getMessage());
 			}
 		}
@@ -146,7 +151,8 @@ class FixtureCheckShell extends Shell {
 	 * @param array $liveFields The live DB fields
 	 * @return void
 	 */
-	public function _compareFields($fixtureFields, $liveFields) {
+	public function _compareFields($fixtureFields, $liveFields)
+	{
 		// Warn only about relevant fields
 		$list = [
 			'autoIncrement',
@@ -173,7 +179,10 @@ class FixtureCheckShell extends Shell {
 				}
 
 				if (!isset($liveField[$key]) && $value !== null) {
-					$errors[] = ' * ' . sprintf('Field attribute `%s` is missing from the live DB!', $fieldName . ':' . $key);
+					$errors[] = ' * ' . sprintf(
+						'Field attribute `%s` is missing from the live DB!',
+						$fieldName . ':' . $key
+					);
 					continue;
 				}
 
@@ -206,7 +215,8 @@ class FixtureCheckShell extends Shell {
 	 *
 	 * @return array
 	 */
-	protected function _getFixtures() {
+	protected function _getFixtures()
+	{
 		$fixtures = $this->_getFixturesFromOptions();
 		if ($fixtures) {
 			return $fixtures;
@@ -220,7 +230,8 @@ class FixtureCheckShell extends Shell {
 	 *
 	 * @return array|bool
 	 */
-	protected function _getFixturesFromOptions() {
+	protected function _getFixturesFromOptions()
+	{
 		$fixtureString = $this->param('fixtures');
 		if (!empty($fixtureString)) {
 			$fixtures = explode(',', $fixtureString);
@@ -238,7 +249,8 @@ class FixtureCheckShell extends Shell {
 	 *
 	 * @return array Array of fixture files
 	 */
-	protected function _getFixtureFiles() {
+	protected function _getFixtureFiles()
+	{
 		$fixtureFolder = TESTS . 'Fixture' . DS;
 		$plugin = $this->param('plugin');
 		if ($plugin) {
@@ -269,7 +281,8 @@ class FixtureCheckShell extends Shell {
 	 * @param string $message Message to display.
 	 * @return void
 	 */
-	protected function _doCompareFieldPresence($one, $two, $fixtureClass, $message) {
+	protected function _doCompareFieldPresence($one, $two, $fixtureClass, $message)
+	{
 		$diff = array_diff_key($one, $two);
 		if (!empty($diff)) {
 			$this->warn(sprintf($message, $fixtureClass));
@@ -289,7 +302,8 @@ class FixtureCheckShell extends Shell {
 	 * @param string $fixtureClass Fixture class name.
 	 * @return void
 	 */
-	protected function _compareFieldPresence($fixtureFields, $liveFields, $fixtureClass) {
+	protected function _compareFieldPresence($fixtureFields, $liveFields, $fixtureClass)
+	{
 		$message = '%s has fields that are not in the live DB:';
 		$this->_doCompareFieldPresence($fixtureFields, $liveFields, $fixtureClass, $message);
 
@@ -300,7 +314,8 @@ class FixtureCheckShell extends Shell {
 	/**
 	 * @inheritDoc
 	 */
-	public function getOptionParser() {
+	public function getOptionParser()
+	{
 		return parent::getOptionParser()
 			->setDescription('Compare DB and fixture schema columns.')
 			->addOption('connection', [
@@ -326,5 +341,4 @@ class FixtureCheckShell extends Shell {
 				'default' => null
 			]);
 	}
-
 }
