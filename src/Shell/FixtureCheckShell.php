@@ -124,7 +124,7 @@ class FixtureCheckShell extends Shell
 
 				$this->_compareFieldPresence($fixtureFields, $liveFields, $fixtureClass);
 				$this->_compareFields($fixtureFields, $liveFields);
-			} catch(Exception $e) {
+			} catch (Exception $e) {
 				$this->err($e->getMessage());
 			}
 		}
@@ -296,7 +296,8 @@ class FixtureCheckShell extends Shell
 	 * @param string $message Message to display.
 	 * @return bool
 	 */
-	protected function _doCompareFieldPresence($one, $two, $fixtureClass, $message): bool {
+	protected function _doCompareFieldPresence($one, $two, $fixtureClass, $message): bool
+	{
 		$diff = array_diff_key($one, $two);
 		if (!empty($diff)) {
 			$this->warn(sprintf($message, $fixtureClass));
@@ -320,7 +321,8 @@ class FixtureCheckShell extends Shell
 	 * @param string $fixtureClass Fixture class name.
 	 * @return bool
 	 */
-	protected function _compareFieldPresence($fixtureFields, $liveFields, $fixtureClass): bool {
+	protected function _compareFieldPresence($fixtureFields, $liveFields, $fixtureClass): bool
+	{
 
 		$message = '%s has fields that are not in the live DB:';
 		$result = $this->_doCompareFieldPresence($fixtureFields, $liveFields, $fixtureClass, $message);
