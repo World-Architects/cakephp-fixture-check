@@ -1,4 +1,5 @@
 <?php
+
 namespace Psa\FixtureCheck\Shell;
 
 use Cake\Console\Shell;
@@ -29,7 +30,8 @@ use Cake\ORM\Table;
  * @copyright PSA Publishers Ltd
  * @license MIT
  */
-class FixtureCheckShell extends Shell {
+class FixtureCheckShell extends Shell
+{
 
 	/**
 	 * Configuration read from Configure
@@ -48,9 +50,15 @@ class FixtureCheckShell extends Shell {
 	protected $_issuesFound = false;
 
 	/**
+	 * @var int
+	 */
+	protected $_totalDifferencesDetected = 0;
+
+	/**
 	 * @inheritDoc
 	 */
-	public function initialize() {
+	public function initialize()
+	{
 		parent::initialize();
 		$this->_config = (array)Configure::read('FixtureCheck') + $this->_config;
 	}
@@ -58,14 +66,16 @@ class FixtureCheckShell extends Shell {
 	/**
 	 * @return void
 	 */
-	public function main() {
+	public function main()
+	{
 		$this->diff();
 	}
 
 	/**
 	 * @return void
 	 */
-	public function diff() {
+	public function diff()
+	{
 		$fixtures = $this->_getFixtures();
 		$connection = ConnectionManager::get($this->param('connection'));
 
@@ -124,10 +134,14 @@ class FixtureCheckShell extends Shell {
 			foreach ($this->_config['ignoreClasses'] as $ignoredFixture) {
 				$this->out(' * ' . $ignoredFixture);
 			}
+			$this->out($this->nl(0));
 		}
 
 		if ($this->_issuesFound) {
-			$this->abort('Differences detected, check your fixtures and DB.');
+			$this->abort(sprintf(
+				'%d differences detected, check your fixtures and DB.',
+				$this->_totalDifferencesDetected
+			));
 		}
 	}
 
@@ -138,7 +152,8 @@ class FixtureCheckShell extends Shell {
 	 * @param array $liveFields The live DB fields
 	 * @return void
 	 */
-	public function _compareFields($fixtureFields, $liveFields) {
+	public function _compareFields($fixtureFields, $liveFields)
+	{
 		// Warn only about relevant fields
 		$list = [
 			'autoIncrement',
@@ -171,7 +186,10 @@ class FixtureCheckShell extends Shell {
 				}
 
 				if (!isset($liveField[$key]) && $value !== null) {
-					$errors[] = ' * ' . sprintf('Field attribute `%s` is missing from the live DB!', $fieldName . ':' . $key);
+					$errors[] = ' * ' . sprintf(
+						'Field attribute `%s` is missing from the live DB!',
+						$fieldName . ':' . $key
+					);
 					continue;
 				}
 
@@ -180,7 +198,7 @@ class FixtureCheckShell extends Shell {
 					continue;
 				}
 
-				if ($liveField[$key] !== $value) {
+				if (isset($liveField[$key]) && $liveField[$key] !== $value) {
 					$errors[] = ' * ' . sprintf(
 						'Field `%s` attribute `%s` differs from live DB! (`%s` vs `%s` live)',
 						$fieldName,
@@ -196,7 +214,9 @@ class FixtureCheckShell extends Shell {
 			return true;
 		}
 
-		$this->warn('The following field attributes mismatch:');
+		$errorCount = count($errors);
+		$this->_totalDifferencesDetected += $errorCount;
+		$this->warn(sprintf('Found %d attribute mismatches:', $errorCount));
 
 		$this->out($errors);
 		$this->_issuesFound = true;
@@ -210,7 +230,8 @@ class FixtureCheckShell extends Shell {
 	 *
 	 * @return array
 	 */
-	protected function _getFixtures() {
+	protected function _getFixtures()
+	{
 		$fixtures = $this->_getFixturesFromOptions();
 		if ($fixtures) {
 			return $fixtures;
@@ -224,7 +245,8 @@ class FixtureCheckShell extends Shell {
 	 *
 	 * @return array|bool
 	 */
-	protected function _getFixturesFromOptions() {
+	protected function _getFixturesFromOptions()
+	{
 		$fixtureString = $this->param('fixtures');
 		if (!empty($fixtureString)) {
 			$fixtures = explode(',', $fixtureString);
@@ -242,7 +264,8 @@ class FixtureCheckShell extends Shell {
 	 *
 	 * @return array Array of fixture files
 	 */
-	protected function _getFixtureFiles() {
+	protected function _getFixtureFiles()
+	{
 		$fixtureFolder = TESTS . 'Fixture' . DS;
 		$plugin = $this->param('plugin');
 		if ($plugin) {
@@ -298,6 +321,7 @@ class FixtureCheckShell extends Shell {
 	 * @return bool
 	 */
 	protected function _compareFieldPresence($fixtureFields, $liveFields, $fixtureClass): bool {
+
 		$message = '%s has fields that are not in the live DB:';
 		$result = $this->_doCompareFieldPresence($fixtureFields, $liveFields, $fixtureClass, $message);
 
@@ -310,7 +334,8 @@ class FixtureCheckShell extends Shell {
 	/**
 	 * @inheritDoc
 	 */
-	public function getOptionParser() {
+	public function getOptionParser()
+	{
 		return parent::getOptionParser()
 			->setDescription('Compare DB and fixture schema columns.')
 			->addOption('connection', [
@@ -336,5 +361,4 @@ class FixtureCheckShell extends Shell {
 				'default' => null
 			]);
 	}
-
 }
