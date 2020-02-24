@@ -122,8 +122,15 @@ class FixtureCheckShell extends Shell
 				ksort($fixtureFields);
 				ksort($liveFields);
 
-				$this->_compareFieldPresence($fixtureFields, $liveFields, $fixtureClass);
-				$this->_compareFields($fixtureFields, $liveFields);
+
+				if ($this->param('only-attributes') === false) {
+					$this->_compareFieldPresence($fixtureFields, $liveFields, $fixtureClass);
+				}
+
+				if ($this->param('only-missing-fields') === false) {
+					$this->_compareFields($fixtureFields, $liveFields);
+				}
+
 			} catch (Exception $e) {
 				$this->err($e->getMessage());
 			}
@@ -177,7 +184,11 @@ class FixtureCheckShell extends Shell
 			// Cast it to string because the default value returned from the DB
 			// seems to be always a string :(
 			if (isset($fixtureField['default'])) {
-				$fixtureField['default'] = (string)$fixtureField['default'];
+				if ($fixtureField['default'] === false) {
+					$fixtureField['default'] = '0';
+				} else {
+					$fixtureField['default'] = (string)$fixtureField['default'];
+				}
 			}
 
 			foreach ($fixtureField as $key => $value) {
@@ -357,6 +368,16 @@ class FixtureCheckShell extends Shell
 				'help' => 'Direction of diff detection: `both`, `fixture` or `db`.'
 			])
 			*/
+			->addOption('only-missing-fields', [
+				'help' => 'Fixtures to use.',
+				'short' => '',
+				'default' => false
+			])
+			->addOption('only-attributes', [
+				'help' => 'Fixtures to use.',
+				'short' => '',
+				'default' => false
+			])
 			->addOption('fixtures', [
 				'help' => 'Fixtures to use.',
 				'short' => 'f',
