@@ -6,6 +6,7 @@ use Cake\Console\Shell;
 use Cake\Core\App;
 use Cake\Core\Configure;
 use Cake\Core\Plugin;
+use Cake\Database\Exception;
 use Cake\Database\Schema\Collection;
 use Cake\Datasource\ConnectionManager;
 use Cake\Error\Debugger;
@@ -121,9 +122,16 @@ class FixtureCheckShell extends Shell
 				ksort($fixtureFields);
 				ksort($liveFields);
 
-				$this->_compareFieldPresence($fixtureFields, $liveFields, $fixtureClass);
-				$this->_compareFields($fixtureFields, $liveFields);
-			} catch (\Cake\Database\Exception $e) {
+
+				if ($this->param('only-attributes') === false) {
+					$this->_compareFieldPresence($fixtureFields, $liveFields, $fixtureClass);
+				}
+
+				if ($this->param('only-missing-fields') === false) {
+					$this->_compareFields($fixtureFields, $liveFields);
+				}
+
+			} catch (Exception $e) {
 				$this->err($e->getMessage());
 			}
 		}
@@ -173,6 +181,16 @@ class FixtureCheckShell extends Shell
 
 			$liveField = $liveFields[$fieldName];
 
+			// Cast it to string because the default value returned from the DB
+			// seems to be always a string :(
+			if (isset($fixtureField['default'])) {
+				if ($fixtureField['default'] === false) {
+					$fixtureField['default'] = '0';
+				} else {
+					$fixtureField['default'] = (string)$fixtureField['default'];
+				}
+			}
+
 			foreach ($fixtureField as $key => $value) {
 				if (!in_array($key, $list)) {
 					continue;
@@ -186,10 +204,16 @@ class FixtureCheckShell extends Shell
 					continue;
 				}
 
+				if ($key === 'autoIncrement') {
+					// @todo unsure how to handle this case.
+					continue;
+				}
+
 				if (isset($liveField[$key]) && $liveField[$key] !== $value) {
 					$errors[] = ' * ' . sprintf(
-						'Field attribute `%s` differs from live DB! ' . $this->nl(1) . '   %s vs %s on live',
-						$fieldName . ':' . $key,
+						'Field `%s` attribute `%s` differs from live DB! (`%s` vs `%s` live)',
+						$fieldName,
+						$key,
 						Debugger::exportVar($value, true),
 						Debugger::exportVar($liveField[$key], true)
 					);
@@ -198,7 +222,7 @@ class FixtureCheckShell extends Shell
 		}
 
 		if (!$errors) {
-			return;
+			return true;
 		}
 
 		$errorCount = count($errors);
@@ -208,6 +232,8 @@ class FixtureCheckShell extends Shell
 		$this->out($errors);
 		$this->_issuesFound = true;
 		$this->out($this->nl(0));
+
+		return false;
 	}
 
 	/**
@@ -279,9 +305,9 @@ class FixtureCheckShell extends Shell
 	 * @param array $two Array two
 	 * @param string $fixtureClass Fixture class name.
 	 * @param string $message Message to display.
-	 * @return void
+	 * @return bool
 	 */
-	protected function _doCompareFieldPresence($one, $two, $fixtureClass, $message)
+	protected function _doCompareFieldPresence($one, $two, $fixtureClass, $message): bool
 	{
 		$diff = array_diff_key($one, $two);
 		if (!empty($diff)) {
@@ -291,7 +317,11 @@ class FixtureCheckShell extends Shell
 			}
 			$this->out($this->nl(0));
 			$this->_issuesFound = true;
+
+			return false;
 		}
+
+		return true;
 	}
 
 	/**
@@ -300,15 +330,18 @@ class FixtureCheckShell extends Shell
 	 * @param array $fixtureFields The fixtures fields array.
 	 * @param array $liveFields The live DB fields
 	 * @param string $fixtureClass Fixture class name.
-	 * @return void
+	 * @return bool
 	 */
-	protected function _compareFieldPresence($fixtureFields, $liveFields, $fixtureClass)
+	protected function _compareFieldPresence($fixtureFields, $liveFields, $fixtureClass): bool
 	{
+
 		$message = '%s has fields that are not in the live DB:';
-		$this->_doCompareFieldPresence($fixtureFields, $liveFields, $fixtureClass, $message);
+		$result = $this->_doCompareFieldPresence($fixtureFields, $liveFields, $fixtureClass, $message);
 
 		$message = 'Live DB has fields that are not in %s';
-		$this->_doCompareFieldPresence($liveFields, $fixtureFields, $fixtureClass, $message);
+		$result2 = $this->_doCompareFieldPresence($liveFields, $fixtureFields, $fixtureClass, $message);
+
+		return $result && $result2;
 	}
 
 	/**
@@ -335,6 +368,16 @@ class FixtureCheckShell extends Shell
 				'help' => 'Direction of diff detection: `both`, `fixture` or `db`.'
 			])
 			*/
+			->addOption('only-missing-fields', [
+				'help' => 'Fixtures to use.',
+				'short' => '',
+				'default' => false
+			])
+			->addOption('only-attributes', [
+				'help' => 'Fixtures to use.',
+				'short' => '',
+				'default' => false
+			])
 			->addOption('fixtures', [
 				'help' => 'Fixtures to use.',
 				'short' => 'f',
